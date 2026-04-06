@@ -46,8 +46,8 @@ This platform serves two functions for MediConnect:
      └──────────┘   └────┬─────┘ └────┬─────┘ └──────────┘
                          │            │
                     ┌────┴────┐  ┌────┴────────────────────┐
-                    │ Gemini  │  │ Prometheus │ Loki        │
-                    │2.5 Flash│  │ AlertMgr   │ 31d retain  │
+                    │   LLM   │  │ Prometheus │ Loki        │
+                    │ Provider│  │ AlertMgr   │ 31d retain  │
                     └─────────┘  └────────────┴─────────────┘
 ```
 
@@ -96,13 +96,13 @@ knowledge/codebase/
 
 ### Prerequisites
 - Docker Desktop 4.0+ (allocate 4.5GB+ memory)
-- Gemini API key
+- LLM API key (configure in `.env`)
 
 ### Setup
 ```bash
 # 1. Configure environment
 cp configs/.env.example configs/.env
-# Edit .env — add GEMINI_API_KEY
+# Edit .env — add your LLM API key
 
 # 2. Start platform
 cd configs && docker compose up -d
