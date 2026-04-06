@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert.rules"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'lightrag'
+    static_configs:
+      - targets: ['lightrag:9621']
+
+  - job_name: 'grafana'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['grafana:3000']
+
+  - job_name: 'nginx'
+    metrics_path: /nginx_status
+    static_configs:
+      - targets: ['nginx:80']
+
+  - job_name: 'jaeger'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['jaeger:14269']
+
+  - job_name: 'sonarqube'
+    metrics_path: /api/system/status
+    static_configs:
+      - targets: ['sonarqube:9000']
+
+  - job_name: 'loki'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['loki:3100']

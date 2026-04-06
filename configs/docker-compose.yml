@@ -1,0 +1,566 @@
+services:
+
+  lightrag:
+    image: ghcr.io/hkuds/lightrag:1.4.6
+    container_name: lightrag
+    ports:
+      - "127.0.0.1:9621:9621"
+    volumes:
+      - ../lightrag/data:/app/data
+      - ../lightrag/uploads:/app/uploads
+      - ${DEV_PATH:-./clients}:/app/clients
+    env_file:
+      - .env
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9621"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '2.0'
+    networks:
+      - backend
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    container_name: jaeger
+    ports:
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '1.0'
+    networks:
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.5
+    container_name: prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ../monitoring/prometheus:/etc/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '1.0'
+    networks:
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ../monitoring/grafana:/var/lib/grafana
+      - ../monitoring/grafana/provisioning:/var/lib/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '1.0'
+    networks:
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.6.0
+    container_name: loki
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ../monitoring/loki:/loki
+      - ../monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml
+    command: -config.file=/etc/loki/loki-config.yml
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: '1.0'
+    networks:
+      - monitoring
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  sonarqube:
+    image: sonarqube:10.8-community
+    container_name: sonarqube
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - ../security/sonarqube:/opt/sonarqube/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: '2.0'
+    networks:
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.28-alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./ssl:/etc/ssl/certs
+      - ../certbot/www:/var/www/certbot:ro
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/cache/nginx:rw,noexec,nosuid,size=128m
+      - /run:rw,noexec,nosuid,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+      - CHOWN
+      - SETGID
+      - SETUID
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+
+  authelia:
+    image: authelia/authelia:4.39.15
+    container_name: authelia
+    ports:
+      - "127.0.0.1:9091:9091"
+    volumes:
+      - ./authelia:/config
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9091/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+    networks:
+      - frontend
+      - backend
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ../monitoring/alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+    networks:
+      - monitoring
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+        labels: "service"
+        loki-retries: "2"
+        loki-max-backoff: "800ms"
+        loki-timeout: "1s"
+        mode: "non-blocking"
+    restart: unless-stopped
+
+  # RAG-Anything multimodal document processor
+  # Process a document:  docker compose run raganything /app/data/inputs/yourfile.pdf
+  # Process all files:   docker compose run raganything --dir /app/data/inputs/
+  # Query knowledge base: docker compose run raganything --query "your question"
+  raganything:
+    build:
+      context: ../ragAnything
+      dockerfile: Dockerfile
+    container_name: raganything
+    env_file:
+      - .env
+    volumes:
+      - ../lightrag/data:/app/data
+      - ../ragAnything/output:/app/output
+      - ../ragAnything/storage:/app/storage
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '2.0'
+    networks:
+      - backend
+    profiles: ["rag"]
+
+  # On-demand HIPAA compliance scanner — run with: docker compose --profile scan run checkov
+  checkov:
+    image: bridgecrew/checkov:latest
+    container_name: checkov
+    volumes:
+      - ${TERRAFORM_PROD_PATH:-.}:/tf:ro
+      - ../reports/hipaa:/reports
+    command: -d /tf --framework terraform -o json --output-file-path /reports
+    profiles: ["scan"]
+
+  # On-demand container vulnerability scanner — run with: docker compose --profile scan up trivy
+  # WARNING: Do NOT use trivy versions 0.69.4-0.69.6 (supply chain compromise, March 2026)
+  trivy:
+    image: aquasec/trivy:0.69.3
+    container_name: trivy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ../reports/soc2:/reports
+    command: image --format json --output /reports/trivy-scan.json ghcr.io/hkuds/lightrag:1.4.6
+    profiles: ["scan"]
+
+  # Prowler AWS — all compliance frameworks
+  # Run with: docker compose --profile scan run prowler
+  prowler:
+    image: prowlercloud/prowler:latest
+    container_name: prowler
+    volumes:
+      - ${AWS_CONFIG_DIR:-.}:/home/prowler/.aws:ro
+      - ../reports/hipaa:/reports/hipaa
+      - ../reports/gdpr:/reports/gdpr
+      - ../reports/soc2:/reports/soc2
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        poetry run prowler aws --compliance hipaa_aws nist_800_53_revision_5_aws --output-formats json-ocsf --output-directory /reports/hipaa ;
+        poetry run prowler aws --compliance gdpr_aws nis2_aws --output-formats json-ocsf --output-directory /reports/gdpr ;
+        poetry run prowler aws --compliance soc2_aws iso27001_2022_aws pci_4.0_aws cis_6.0_aws --output-formats json-ocsf --output-directory /reports/soc2 ;
+        echo "=== AWS compliance scans complete ==="
+    profiles: ["scan"]
+
+  # Prowler GCP — all compliance frameworks
+  # Run with: docker compose --profile scan run prowler-gcp
+  prowler-gcp:
+    image: prowlercloud/prowler:latest
+    container_name: prowler-gcp
+    volumes:
+      - ${GCP_KEY_PATH:-.env}:/home/prowler/gcp_key.json:ro
+      - ../reports/hipaa:/reports/hipaa
+      - ../reports/gdpr:/reports/gdpr
+      - ../reports/soc2:/reports/soc2
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/home/prowler/gcp_key.json
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        poetry run prowler gcp --project-id mediconnect-analytics --compliance hipaa_gcp --output-formats json-ocsf --output-directory /reports/hipaa ;
+        poetry run prowler gcp --project-id mediconnect-analytics --compliance nis2_gcp --output-formats json-ocsf --output-directory /reports/gdpr ;
+        poetry run prowler gcp --project-id mediconnect-analytics --compliance soc2_gcp iso27001_2022_gcp pci_4.0_gcp cis_4.0_gcp --output-formats json-ocsf --output-directory /reports/soc2 ;
+        echo "=== GCP compliance scans complete ==="
+    profiles: ["scan"]
+
+  # Prowler Azure — all compliance frameworks
+  # Run with: docker compose --profile scan run prowler-azure
+  # Requires service principal: set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID in .env
+  prowler-azure:
+    image: prowlercloud/prowler:latest
+    container_name: prowler-azure
+    volumes:
+      - ../reports/hipaa:/reports/hipaa
+      - ../reports/gdpr:/reports/gdpr
+      - ../reports/soc2:/reports/soc2
+    environment:
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        poetry run prowler azure --sp-env-auth --compliance hipaa_azure --output-formats json-ocsf --output-directory /reports/hipaa ;
+        poetry run prowler azure --sp-env-auth --compliance nis2_azure --output-formats json-ocsf --output-directory /reports/gdpr ;
+        poetry run prowler azure --sp-env-auth --compliance soc2_azure iso27001_2022_azure pci_4.0_azure cis_5.0_azure --output-formats json-ocsf --output-directory /reports/soc2 ;
+        echo "=== Azure compliance scans complete ==="
+    profiles: ["scan"]
+
+  # HAPI FHIR Validator — validates FHIR R4 resources for HIPAA compliance
+  # Run with: docker compose --profile scan up hapi-fhir
+  # Submit resources: curl -X POST http://localhost:8080/fhir/Patient -H "Content-Type: application/fhir+json" -d @patient.json
+  hapi-fhir:
+    image: hapiproject/hapi:latest
+    container_name: hapi-fhir
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../reports/hipaa:/reports
+    environment:
+      - HAPI_FHIR_VALIDATION_REQUESTS_ENABLED=true
+      - HAPI_FHIR_FHIR_VERSION=R4
+      - JAVA_TOOL_OPTIONS=-Xmx768m
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '1.0'
+    profiles: ["scan"]
+
+  # OWASP ZAP — API security scanner for FHIR endpoints
+  # Run with: docker compose --profile scan run owasp-zap
+  # NOTE: Only works when mediconnect services are running locally
+  owasp-zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: owasp-zap
+    volumes:
+      - ../reports/soc2:/zap/wrk
+    command: zap-api-scan.py -t http://host.docker.internal:3000/api -f openapi -r zap-api-report.html -w zap-api-report.md -J zap-api-report.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+    profiles: ["scan"]
+
+  # Inferno ONC g(10) FHIR Conformance Testing
+  # Setup: bash security/inferno/setup.sh (clones repo once)
+  # Run with: docker compose --profile scan up inferno
+  # NOTE: Requires ~4GB RAM — stop other heavy services first on 8GB systems
+  inferno:
+    build:
+      context: ../security/inferno/onc-certification-g10-test-kit
+    container_name: inferno
+    ports:
+      - "127.0.0.1:4567:4567"
+    volumes:
+      - ../security/inferno/data:/opt/inferno/data
+    environment:
+      - REDIS_URL=redis://inferno-redis:6379/0
+      - FHIR_RESOURCE_VALIDATOR_URL=http://inferno-validator:3500
+      - INFERNO_HOST=http://localhost:4567
+    command: sh -c "bundle exec inferno migrate && bundle exec puma"
+    depends_on:
+      - inferno-validator
+      - inferno-redis
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+          cpus: '2.0'
+    profiles: ["scan"]
+
+  inferno-worker:
+    build:
+      context: ../security/inferno/onc-certification-g10-test-kit
+    container_name: inferno-worker
+    volumes:
+      - ../security/inferno/data:/opt/inferno/data
+    environment:
+      - REDIS_URL=redis://inferno-redis:6379/0
+      - FHIR_RESOURCE_VALIDATOR_URL=http://inferno-validator:3500
+    command: bundle exec sidekiq -r ./worker.rb
+    depends_on:
+      - inferno-redis
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+    profiles: ["scan"]
+
+  inferno-redis:
+    image: redis:7-alpine
+    container_name: inferno-redis
+    volumes:
+      - ../security/inferno/data/redis:/data
+    command: redis-server --appendonly yes
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.5'
+    profiles: ["scan"]
+
+  inferno-validator:
+    image: infernocommunity/inferno-resource-validator:1.0.67
+    container_name: inferno-validator
+    environment:
+      - SESSION_CACHE_DURATION=-1
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1.0'
+    profiles: ["scan"]
+
+  # Healthcare Compliance Scanner — pattern-based static analysis for any healthcare codebase
+  # Run with: docker compose --profile scan run healthcare-scanner
+  # Change PROJECT_PATH in .env to scan a different project
+  healthcare-scanner:
+    build:
+      context: ../security/healthcare-scanner
+    container_name: healthcare-scanner
+    volumes:
+      - ${DEV_PATH:-.}:/project:ro
+      - ../reports/hipaa:/reports
+    environment:
+      - PROJECT_PATH=${PROJECT_PATH:-mediconnect-project/mediconnect-infrastructure-production}
+      - PROJECT_TYPE=${PROJECT_TYPE:-auto}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '1.0'
+    profiles: ["scan"]
+
+  # SSL certificate renewal — run with: docker compose --profile certbot up certbot
+  certbot:
+    image: certbot/certbot:v3.3.0
+    container_name: certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - ../certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    profiles: ["certbot"]
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+  monitoring:
+    driver: bridge
+    internal: true

@@ -1,0 +1,75 @@
+# ============================================
+# SECRETS — NEVER COMMIT
+# ============================================
+configs/.env
+configs/.restic-password
+configs/ssl/
+configs/authelia/configuration.yml
+configs/authelia/users_database.yml
+configs/authelia/db.sqlite3
+configs/authelia/notification.txt
+
+# ============================================
+# CLAUDE CODE — INTERNAL TOOLING
+# ============================================
+CLAUDE.md
+EXECUTION_PLAN.md
+EXECUTION_PLAN_COMPOSE.md
+.claude/
+
+# ============================================
+# RUNTIME DATA — GENERATED, NOT SOURCE
+# ============================================
+
+# LightRAG data (includes ingested documents)
+lightrag/data/
+lightrag/uploads/
+
+# RAG-Anything runtime
+ragAnything/output/
+ragAnything/storage/
+
+# Monitoring runtime data
+monitoring/loki/chunks/
+monitoring/loki/wal/
+monitoring/loki/tsdb-shipper-*/
+monitoring/loki/compactor/
+monitoring/loki/rules/
+monitoring/grafana/grafana.db
+monitoring/grafana/alerting/
+monitoring/grafana/csv/
+monitoring/grafana/plugins/
+monitoring/grafana/png/
+monitoring/grafana/file-collections/
+
+# SonarQube runtime data
+security/sonarqube/
+
+# Backup data
+backups/
+
+# Certbot runtime
+certbot/
+
+# Reports (generated scan output — contains cloud account IDs, ARNs, resource names)
+reports/hipaa/*.json
+reports/soc2/*.json
+reports/gdpr/*.json
+reports/*/compliance/
+reports/*.log
+
+# Security scan runtime data
+security/inferno/data/
+security/inferno/onc-certification-g10-test-kit/
+
+# ============================================
+# OS / IDE
+# ============================================
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/

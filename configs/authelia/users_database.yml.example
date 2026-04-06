@@ -1,0 +1,13 @@
+# Copy this file to users_database.yml and set your user:
+#   cp users_database.yml.example users_database.yml
+#
+# Generate a password hash with:
+#   docker run --rm authelia/authelia:4.39.15 authelia crypto hash generate argon2
+
+users:
+  your_username:
+    displayname: "Your Name"
+    password: "GENERATE_ARGON2_HASH_WITH_COMMAND_ABOVE"
+    email: your-email@example.com
+    groups:
+      - admins

@@ -1,0 +1,32 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+receivers:
+  - name: 'default'
+    # Configure your notification channel here:
+    # For Slack:
+    # slack_configs:
+    #   - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+    #     channel: '#alerts'
+    #     send_resolved: true
+    # For Email:
+    # email_configs:
+    #   - to: 'your-email@example.com'
+    #     from: 'alertmanager@healthcodeanalysis.com'
+    #     smarthost: 'smtp.example.com:587'
+    #     auth_username: 'your-user'
+    #     auth_password: 'your-password'
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname']

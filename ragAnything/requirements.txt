@@ -1,0 +1,3 @@
+raganything[all]==1.2.10
+lightrag-hku
+google-generativeai
