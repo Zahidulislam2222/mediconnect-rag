@@ -72,24 +72,61 @@ This platform serves two functions for MediConnect:
 | **Inferno** | latest | - | ONC g(10) FHIR conformance testing |
 | **Certbot** | v3.3.0 | - | SSL certificate auto-renewal |
 
+## Production RAG Pipeline
+
+The backend's chatbot controller runs a **13-step pipeline** with enterprise RAG features:
+
+| Step | Component | Cost |
+|------|-----------|------|
+| 1-7 | Rate limit, token budget, abuse detection, PII scrub, intent detection, cache | Free |
+| 8 | **Query Planner** — decomposes complex queries into sub-queries | Free (heuristic) or 1 LLM call (ambiguous) |
+| 9 | **LightRAG Query** — graph-based retrieval (supports multi-query) | Free |
+| 10 | **Confidence Scoring + Reranking** — TF-IDF overlap + cosine similarity | Free |
+| 11 | **AI Generation** via Model Router — dynamic model selection per task | 1 LLM call |
+| 12 | **Auditor + Strategist Validation** — hallucination/contradiction check | 1 LLM call (skipped if confidence > 0.85) |
+| 13 | Response pipeline — cache, audit, CloudWatch metrics, event bus | Free |
+
+### Dynamic Model Selection (No Hardcoded Models)
+
+All models are configured via environment variables:
+
+| Task Type | Purpose | Env Var Prefix |
+|-----------|---------|---------------|
+| `generation` | Main chatbot response | `MODEL_GENERATION_*` |
+| `validation` | Auditor + Strategist | `MODEL_VALIDATION_*` |
+| `planning` | Query decomposition | `MODEL_PLANNING_*` |
+| `evaluation` | Offline LLM judge | `MODEL_EVALUATION_*` |
+
+Each task type supports Bedrock, Vertex AI, and Azure OpenAI with automatic failover.
+
+### HyDE (Hypothetical Document Embeddings)
+
+At ingestion time, 3-5 hypothetical patient questions are generated per document. This improves retrieval by enabling question-to-question matching.
+
+```bash
+# Enhanced ingestion with HyDE
+bash scripts/ingest-with-questions.sh
+```
+
 ## Knowledge Bases
 
 ### Medical (Patient Chatbot)
 ```
 knowledge/medical/
 ├── faqs/
-│   ├── appointments.md      ← Booking, rescheduling, cancellation
-│   ├── billing.md           ← Payments, refunds, pricing
-│   ├── subscriptions.md     ← Plans, discounts, family sharing
-│   └── health-records.md    ← FHIR data, export, GDPR rights
-└── policies/
-    └── privacy-summary.md   ← Privacy policy for chatbot context
+│   ├── appointments.md      <- Booking, rescheduling, cancellation
+│   ├── billing.md           <- Payments, refunds, pricing
+│   ├── subscriptions.md     <- Plans, discounts, family sharing
+│   └── health-records.md    <- FHIR data, export, GDPR rights
+├── policies/
+│   └── privacy-summary.md   <- Privacy policy for chatbot context
+└── augmented/               <- HyDE-enhanced versions (auto-generated)
 ```
 
 ### Codebase (Developer Intelligence)
 ```
 knowledge/codebase/
-└── architecture.md           ← Service architecture, APIs, compliance controls
+└── architecture.md           <- Service architecture, APIs, compliance controls
 ```
 
 ## Getting Started
@@ -107,11 +144,19 @@ cp configs/.env.example configs/.env
 # 2. Start platform
 cd configs && docker compose up -d
 
-# 3. Ingest medical knowledge
-bash scripts/ingest-medical.sh
+# 3. Ingest with HyDE question generation (enhanced)
+bash scripts/ingest-with-questions.sh
 
 # 4. Ingest codebase knowledge
 bash scripts/ingest-codebase.sh
+```
+
+### Run Tests (Free, No AI Calls)
+```bash
+cd mediconnect-infrastructure-production/backend_v2
+npx ts-node --project communication-service/tsconfig.json shared/__tests__/rag-pipeline.test.ts   # 53 assertions
+npx ts-node --project communication-service/tsconfig.json shared/__tests__/rag-red-team.test.ts   # 50 assertions
+npx ts-node --project communication-service/tsconfig.json shared/__tests__/rag-evaluation.test.ts # 15+ assertions
 ```
 
 ### Run Compliance Scans
