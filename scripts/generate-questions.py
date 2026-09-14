@@ -13,10 +13,10 @@ Usage:
 
 Environment:
   GEMINI_API_KEY  — Required (same key used by LightRAG)
-  HYDE_MODEL      — Model for question generation (default: gemini-2.0-flash-lite)
+  HYDE_MODEL      — Required configured model for question generation
 
 Compliance:
-  - No PHI in prompts (knowledge base docs contain only FAQ/policy text)
+  - Operator must ensure inputs are approved public knowledge, without PHI
   - No cloud resource creation (read files, call Gemini API, write files)
   - One-time ingestion cost, not per-user
 """
@@ -28,75 +28,50 @@ import os
 import sys
 import time
 
-# Gemini API via REST (no heavy SDK dependency)
-import urllib.request
-import urllib.error
+# HTTPS-only transport; keys are sent in a header, never a URL.
+import requests
+from urllib.parse import urlsplit, quote
+from hyde_config import load_settings
 
 
 def get_api_key() -> str:
-    key = os.getenv("GEMINI_API_KEY")
-    if not key:
-        print("ERROR: GEMINI_API_KEY environment variable is required", file=sys.stderr)
-        sys.exit(1)
-    return key
+    return load_settings().api_key
 
 
 def get_model() -> str:
-    return os.getenv("HYDE_MODEL", "gemini-2.0-flash-lite")
+    return load_settings().model
 
 
 def generate_questions(content: str, filename: str, api_key: str, model: str) -> list:
-    """Generate 3-5 hypothetical questions for a document using Gemini API."""
-    prompt = f"""You are helping improve a healthcare chatbot's search system.
-Given this knowledge base document, generate exactly 5 questions that a patient would naturally ask that this document answers.
-
-Rules:
-- Questions must be in simple, conversational language (like a real patient would type)
-- Questions must be answerable by the document content
-- Include variations in phrasing (some short, some longer)
-- Do NOT include any personal health information
-- Focus on the specific topics covered in this document
-
-Document ({filename}):
----
-{content[:3000]}
----
-
-Respond with a JSON array of exactly 5 questions, nothing else:
-["question 1", "question 2", "question 3", "question 4", "question 5"]"""
-
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
-
-    payload = json.dumps({
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 500, "temperature": 0.7}
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        url,
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-
+    settings = load_settings()
+    endpoint = urlsplit(settings.api_base)
+    if endpoint.scheme != 'https' or not endpoint.hostname or endpoint.username or endpoint.password:
+        raise ValueError('HyDE requires an HTTPS provider endpoint without embedded credentials')
+    prompt = settings.prompt.format(filename=filename, content=content[:settings.content_characters], question_count=settings.question_count)
+    payload = json.dumps({'contents': [{'parts': [{'text': prompt}]}], 'generationConfig': {'maxOutputTokens': settings.max_output_tokens, 'temperature': settings.temperature}})
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
-            text = data["candidates"][0]["content"]["parts"][0]["text"]
-            # Extract JSON array from response
-            text = text.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
-            questions = json.loads(text)
-            if isinstance(questions, list) and len(questions) > 0:
-                return questions[:5]
-            return []
-    except (urllib.error.URLError, json.JSONDecodeError, KeyError, IndexError) as e:
-        print(f"  WARNING: Question generation failed for {filename}: {e}", file=sys.stderr)
+        route = f"{endpoint.path.rstrip('/')}/{settings.api_version}/models/{quote(model, safe='')}:generateContent"
+        # Requests manages certificate/hostname verification and connection cleanup.
+        # Redirects are refused so the API-key header cannot follow another origin.
+        with requests.post(f'https://{endpoint.netloc}{route}', data=payload.encode('utf-8'),
+                           headers={'Content-Type': 'application/json', 'x-goog-api-key': api_key},
+                           timeout=settings.timeout_seconds, verify=True, allow_redirects=False) as response:
+            if response.status_code != 200:
+                raise ValueError('Provider rejected generation')
+            data = response.json()
+        text = data['candidates'][0]['content']['parts'][0]['text'].strip()
+        if text.startswith('```'):
+            text = text.split('\n', 1)[1].rsplit('```', 1)[0].strip()
+        questions = json.loads(text)
+        if not isinstance(questions, list) or len(questions) != settings.question_count or not all(isinstance(q, str) and q.strip() for q in questions):
+            raise ValueError('Invalid generated question list')
+        return questions
+    except (requests.RequestException, OSError, ValueError, KeyError, IndexError, TypeError):
+        print('WARNING: Question generation failed; no provider response or credentials logged.', file=sys.stderr)
         return []
 
 
-def augment_document(filepath: str, api_key: str, model: str) -> str:
+def augment_document(filepath: str, api_key: str, model: str) -> str | None:
     """Read document, generate questions, return augmented content."""
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
@@ -105,7 +80,7 @@ def augment_document(filepath: str, api_key: str, model: str) -> str:
     questions = generate_questions(content, filename, api_key, model)
 
     if not questions:
-        return content  # Return original if generation failed
+        return None
 
     # Append questions section
     questions_section = "\n\n## Related Questions Patients Might Ask\n\n"
@@ -121,6 +96,9 @@ def process_file(filepath: str, output_dir: str, api_key: str, model: str) -> bo
     print(f"  Processing: {filename} ... ", end="", flush=True)
 
     augmented = augment_document(filepath, api_key, model)
+    if augmented is None:
+        print("FAILED")
+        return False
 
     # Write to output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -193,7 +171,8 @@ def main():
     print()
     print(f"Complete: {succeeded} succeeded, {failed} failed")
     print(f"Augmented files in: {output_dir}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
