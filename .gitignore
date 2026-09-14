@@ -57,6 +57,7 @@ reports/soc2/*.json
 reports/gdpr/*.json
 reports/*/compliance/
 reports/*.log
+reports/backup-verification/
 
 # Security scan runtime data
 security/inferno/data/
@@ -70,6 +71,7 @@ Desktop.ini
 .DS_Store
 *.swp
 *.swo
+__pycache__/
 *~
 .vscode/
 .idea/

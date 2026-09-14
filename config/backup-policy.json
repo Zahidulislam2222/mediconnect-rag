@@ -1,0 +1,12 @@
+{
+  "repository": "backups",
+  "password_file": "configs/.restic-password",
+  "backup_log_directory": "reports",
+  "verification_directory": "reports/backup-verification",
+  "retention": { "daily": 7, "weekly": 4, "monthly": 6 },
+  "groups": [
+    { "tag": "configs", "path": "configs", "exclude": "*.sqlite3" },
+    { "tag": "lightrag-data", "path": "lightrag/data", "exclude": null },
+    { "tag": "grafana", "path": "monitoring/grafana", "exclude": "*.db" }
+  ]
+}

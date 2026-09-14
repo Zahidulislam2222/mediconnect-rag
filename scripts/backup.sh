@@ -7,9 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-REPO="$PROJECT_ROOT/backups"
-PASSWORD_FILE="$PROJECT_ROOT/configs/.restic-password"
-LOG_FILE="$PROJECT_ROOT/reports/backup-$(date +%Y%m%d-%H%M%S).log"
+# Both commands consume the same validated policy. Capture failures before parsing.
+CONFIG_VALUES=$(python3 "$SCRIPT_DIR/backup_settings.py" "$PROJECT_ROOT" paths)
+GROUP_VALUES=$(python3 "$SCRIPT_DIR/backup_settings.py" "$PROJECT_ROOT" groups)
+mapfile -t SETTINGS <<< "$CONFIG_VALUES"
+REPO="${SETTINGS[0]}"
+PASSWORD_FILE="${SETTINGS[1]}"
+LOG_DIR="${SETTINGS[2]}"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/backup-$(date +%Y%m%d-%H%M%S).log"
 
 echo "=== RAGSetup Backup Started: $(date) ===" | tee "$LOG_FILE"
 
@@ -25,35 +31,21 @@ if ! restic -r "$REPO" --password-file "$PASSWORD_FILE" snapshots > /dev/null 2>
     restic -r "$REPO" --password-file "$PASSWORD_FILE" init
 fi
 
-# Backup configs
-echo "Backing up configs..." | tee -a "$LOG_FILE"
-restic -r "$REPO" --password-file "$PASSWORD_FILE" backup \
-    "$PROJECT_ROOT/configs/" \
-    --exclude="*.sqlite3" \
-    --tag "configs" \
-    2>&1 | tee -a "$LOG_FILE"
+# Backup each configured group with its existing exclusions.
+while IFS='|' read -r group source exclude; do
+    echo "Backing up $group..." | tee -a "$LOG_FILE"
+    arguments=(backup "$source" --tag "$group")
+    if [ -n "$exclude" ]; then arguments+=("--exclude=$exclude"); fi
+    restic -r "$REPO" --password-file "$PASSWORD_FILE" "${arguments[@]}" \
+        2>&1 | tee -a "$LOG_FILE"
+done <<< "$GROUP_VALUES"
 
-# Backup LightRAG data
-echo "Backing up LightRAG data..." | tee -a "$LOG_FILE"
-restic -r "$REPO" --password-file "$PASSWORD_FILE" backup \
-    "$PROJECT_ROOT/lightrag/data/" \
-    --tag "lightrag-data" \
-    2>&1 | tee -a "$LOG_FILE"
-
-# Backup Grafana dashboards and provisioning
-echo "Backing up Grafana..." | tee -a "$LOG_FILE"
-restic -r "$REPO" --password-file "$PASSWORD_FILE" backup \
-    "$PROJECT_ROOT/monitoring/grafana/" \
-    --exclude="*.db" \
-    --tag "grafana" \
-    2>&1 | tee -a "$LOG_FILE"
-
-# Prune old backups — keep last 7 daily, 4 weekly, 6 monthly
+# Prune according to the existing retention policy.
 echo "Pruning old backups..." | tee -a "$LOG_FILE"
 restic -r "$REPO" --password-file "$PASSWORD_FILE" forget \
-    --keep-daily 7 \
-    --keep-weekly 4 \
-    --keep-monthly 6 \
+    --keep-daily "${SETTINGS[3]}" \
+    --keep-weekly "${SETTINGS[4]}" \
+    --keep-monthly "${SETTINGS[5]}" \
     --prune \
     2>&1 | tee -a "$LOG_FILE"
 
