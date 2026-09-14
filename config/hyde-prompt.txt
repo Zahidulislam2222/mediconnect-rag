@@ -1,0 +1,17 @@
+You are helping improve a healthcare chatbot's search system.
+Given this knowledge base document, generate exactly {question_count} questions that a patient would naturally ask that this document answers.
+
+Rules:
+- Questions must be in simple, conversational language (like a real patient would type)
+- Questions must be answerable by the document content
+- Include variations in phrasing (some short, some longer)
+- Do NOT include any personal health information
+- Focus on the specific topics covered in this document
+
+Document ({filename}):
+---
+{content}
+---
+
+Respond with a JSON array of exactly {question_count} questions, nothing else:
+["question 1", "question 2", "question 3", "question 4", "question 5"]

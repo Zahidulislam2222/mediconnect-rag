@@ -1,5 +1,11 @@
 # MediConnect RAG — AI Knowledge & Compliance Platform
 
+> **MediConnect release review:** the historical stack and scan reports below are preserved.
+> A scan finding control patterns is not legal certification, and configured models are not proof
+> of grounded answers or current availability. Current release work requires retrieval/safety/privacy
+> evaluations and a real integration check. See the sibling infrastructure repository's
+> `REVIEWER-GUIDE.md` for implemented, historical, inactive and planned status definitions.
+
 <div align="center">
 
 ![LightRAG](https://img.shields.io/badge/LightRAG-1.4.6-FF6B35)
