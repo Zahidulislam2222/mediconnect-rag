@@ -27,7 +27,7 @@ bash -n scripts/*.sh
 python -m py_compile scripts/*.py
 ```
 
-The security workflow (Gitleaks, Semgrep, Bandit) runs on every pull request. New findings in your change must be fixed, never suppressed. One known Semgrep finding in `configs/nginx/default.conf` (header redefinition) is tracked as open work and does not block your change.
+The security workflow (Gitleaks, Semgrep, Bandit) runs on every pull request. New findings in your change must be fixed, never suppressed. Findings block the change; there are no known open findings.
 
 ## Pull requests
 
