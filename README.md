@@ -1,3 +1,44 @@
+# MediConnect RAG — AI knowledge service, monitoring and security scanning
+
+![Licence: MIT](https://img.shields.io/badge/licence-MIT-2563EB)
+![LightRAG](https://img.shields.io/badge/LightRAG-graph_RAG-FF6B35)
+![Status](https://img.shields.io/badge/app_integration-not_accepted_yet-64748B)
+
+**Live showcase:** <https://mediconnect.zahidul-islam.com> · **Platform docs:** [documentation index](https://github.com/Zahidulislam2222/mediconnect-infrastructure-production/blob/main/docs/README.md) · **AI rules:** [AI-GOVERNANCE.md](https://github.com/Zahidulislam2222/mediconnect-infrastructure-production/blob/main/docs/AI-GOVERNANCE.md)
+
+This repository runs the backend for MediConnect's knowledge assistant, which uses LightRAG graph
+retrieval over curated medical FAQs, policies and codebase knowledge. It also holds the self-hosted
+operations stack: Nginx, Authelia two-factor sign-in, Prometheus, Grafana, Loki, Jaeger, security
+scanners and backup scripts.
+
+## Status (2026-09-24)
+
+| Area | Status |
+|---|---|
+| Docker Compose stack and configuration | In source; self-hosted |
+| Backup and restore | Local restore of the current backup verified |
+| HyDE question generation for ingestion | Implemented. Its tests are kept in the maintainer's local test folder and are not published in this repository. |
+| Integration with the MediConnect app | **Not accepted yet.** Needs grounding, safety and privacy evaluations ([AI-GOVERNANCE.md](https://github.com/Zahidulislam2222/mediconnect-infrastructure-production/blob/main/docs/AI-GOVERNANCE.md)). |
+| Compliance scanners | Tools that look for control patterns. **A scan result is not a certification.** |
+
+## Rules
+
+- The assistant gives general information from approved content only. It never diagnoses or prescribes.
+- No identifiable health data goes to a language-model provider without a signed BAA/DPA.
+- When the model is unavailable, the assistant says so. It never invents an answer.
+
+## Documentation, security and licence
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Security policy](SECURITY.md)
+- Code is released under the [MIT Licence](LICENSE). LightRAG, the monitoring tools and container images keep their own licences: [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+---
+
+## Original README (preserved)
+
+> Everything below is the earlier README, kept word for word. Lines that are out of date are **marked ⚠️**, not removed.
+
+
 # MediConnect RAG — AI Knowledge & Compliance Platform
 
 > **MediConnect release review:** the historical stack and scan reports below are preserved.
@@ -27,7 +68,7 @@
 This platform serves two functions for MediConnect:
 
 1. **AI Knowledge Engine** — LightRAG provides graph-based retrieval for the patient chatbot (medical FAQs, doctor articles, subscription info, codebase intelligence)
-2. **Security & Compliance** — Scanning tools verify MediConnect's HIPAA, GDPR, SOC 2, and FHIR compliance
+2. **Security & Compliance** — Scanning tools verify MediConnect's HIPAA, GDPR, SOC 2, and FHIR compliance ⚠️ *Scanners check control patterns; they do not verify legal compliance (2026-09-24).*
 
 ## Architecture
 
