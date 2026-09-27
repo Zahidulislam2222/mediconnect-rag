@@ -1,5 +1,19 @@
 # ============================================
 # SECRETS — NEVER COMMIT
+# Project-private recovery, personal tooling and credentials
+memory/
+CREDENTIALS.md
+PROJECT-DOSSIER.md
+local-tests/
+.credentials/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
 # ============================================
 configs/.env
 configs/.restic-password
@@ -47,6 +61,7 @@ security/sonarqube/
 
 # Backup data
 backups/
+backup-staging/
 
 # Certbot runtime
 certbot/
