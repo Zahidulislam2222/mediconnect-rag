@@ -10,11 +10,15 @@
 # Prerequisites:
 #   - GEMINI_API_KEY set in environment (or .env file)
 #   - LightRAG running at LIGHTRAG_URL (default: http://localhost:9621)
-#   - Python 3.8+ available
+#   - Python 3.10+ and scripts/requirements-hyde.txt dependencies installed
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "${1-}" != "--environment-loaded" ]; then
+    exec python3 "$SCRIPT_DIR/ingestion_environment.py" "$@"
+fi
+shift
 LIGHTRAG_URL="${LIGHTRAG_URL:-http://localhost:9621}"
 KNOWLEDGE_DIR="$(cd "$SCRIPT_DIR/../knowledge/medical" && pwd)"
 AUGMENTED_DIR="$KNOWLEDGE_DIR/augmented"
@@ -23,11 +27,6 @@ echo "════════════════════════�
 echo "  MediConnect Enhanced RAG Ingestion (HyDE + LightRAG)"
 echo "═══════════════════════════════════════════════════════"
 echo ""
-
-# Load .env if it exists
-if [ -f "$SCRIPT_DIR/../configs/.env" ]; then
-    export $(grep -v '^#' "$SCRIPT_DIR/../configs/.env" | xargs)
-fi
 
 # Check prerequisites
 if [ -z "$GEMINI_API_KEY" ]; then

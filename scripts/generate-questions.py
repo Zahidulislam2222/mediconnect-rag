@@ -71,7 +71,7 @@ def generate_questions(content: str, filename: str, api_key: str, model: str) ->
         return []
 
 
-def augment_document(filepath: str, api_key: str, model: str) -> str:
+def augment_document(filepath: str, api_key: str, model: str) -> str | None:
     """Read document, generate questions, return augmented content."""
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
@@ -80,7 +80,7 @@ def augment_document(filepath: str, api_key: str, model: str) -> str:
     questions = generate_questions(content, filename, api_key, model)
 
     if not questions:
-        return content  # Return original if generation failed
+        return None
 
     # Append questions section
     questions_section = "\n\n## Related Questions Patients Might Ask\n\n"
@@ -96,6 +96,9 @@ def process_file(filepath: str, output_dir: str, api_key: str, model: str) -> bo
     print(f"  Processing: {filename} ... ", end="", flush=True)
 
     augmented = augment_document(filepath, api_key, model)
+    if augmented is None:
+        print("FAILED")
+        return False
 
     # Write to output directory
     os.makedirs(output_dir, exist_ok=True)
@@ -168,7 +171,8 @@ def main():
     print()
     print(f"Complete: {succeeded} succeeded, {failed} failed")
     print(f"Augmented files in: {output_dir}")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
