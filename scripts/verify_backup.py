@@ -6,8 +6,20 @@ from pathlib import Path
 import re
 import subprocess
 import tempfile
+import sqlite3
+import shutil
 
 from backup_settings import load_settings
+from sqlite_snapshots import MANIFEST, validate as validate_sqlite
+
+
+def snapshot_tree_path(source):
+    # Restic stores Windows drive roots as /C/... and POSIX paths as /... .
+    if source.drive:
+        if not re.fullmatch(r"[A-Za-z]:", source.drive):
+            raise ValueError("Unsupported snapshot source drive")
+        return "/" + source.drive[0].upper() + "/" + "/".join(source.parts[1:])
+    return source.as_posix()
 
 
 def select_snapshots(snapshots, groups):
@@ -43,6 +55,9 @@ def select_snapshots(snapshots, groups):
 def verify(settings, output_root):
     if not settings.password_file.is_file():
         raise ValueError("Backup password file is unavailable")
+    executable = shutil.which("restic")
+    if not executable:
+        raise ValueError("Restic executable is unavailable")
     output_root = output_root.resolve()
     protected = [settings.repository, *(group.path for group in settings.groups)]
     if any(output_root.is_relative_to(path) for path in protected):
@@ -61,7 +76,7 @@ def verify(settings, output_root):
         with (evidence / (label + ".stdout.log")).open("w", encoding="utf-8") as out, (
             evidence / (label + ".stderr.log")
         ).open("w", encoding="utf-8") as err:
-            result = subprocess.run(["restic", "-r", str(settings.repository), "--password-file",
+            result = subprocess.run([executable, "-r", str(settings.repository), "--password-file",
                                      str(settings.password_file), "--no-cache", *arguments],
                                     stdout=out, stderr=err, check=False)
         return result.returncode
@@ -83,12 +98,18 @@ def verify(settings, output_root):
             entry = {"tag": group.tag, "snapshot_id": snapshot["id"], "status": "RESTORING"}
             state["groups"].append(entry)
             save()
-            entry["restore_exit"] = run(["restore", snapshot["id"], "--target", str(target),
+            reference = snapshot["id"] + ":" + snapshot_tree_path(group.path)
+            entry["restore_exit"] = run(["restore", reference, "--target", str(target),
                                          "--verify"], "restore-" + group.tag)
             entry["status"] = "PASS" if entry["restore_exit"] == 0 else "FAIL"
+            if entry["restore_exit"] == 0 and settings.sqlite and group.tag == settings.sqlite.group_tag:
+                if not (target / MANIFEST).is_file() or (target / MANIFEST).is_symlink():
+                    raise ValueError("Restored SQLite manifest is missing or unsafe")
+                validate_sqlite(target, settings.sqlite)
+                entry["sqlite_integrity"] = "PASS"
             save()
         state["status"] = "PASS" if all(g["status"] == "PASS" for g in state["groups"]) else "FAIL"
-    except (OSError, ValueError, KeyError, TypeError, RuntimeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError, sqlite3.Error) as exc:
         state["status"] = "FAIL"
         state["error"] = str(exc)
     finally:

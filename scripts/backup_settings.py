@@ -14,6 +14,23 @@ class Group:
 
 
 @dataclass(frozen=True)
+class Database:
+    name: str
+    path: Path
+
+
+@dataclass(frozen=True)
+class SQLiteSettings:
+    directory: Path
+    group_tag: str
+    timeout_seconds: float
+    deadline_seconds: float
+    pages_per_step: int
+    retry_sleep_seconds: float
+    databases: tuple[Database, ...]
+
+
+@dataclass(frozen=True)
 class Settings:
     repository: Path
     password_file: Path
@@ -21,6 +38,7 @@ class Settings:
     verification_directory: Path
     retention: tuple[int, int, int]
     groups: tuple[Group, ...]
+    sqlite: SQLiteSettings | None = None
 
 
 def clean_text(value):
@@ -62,7 +80,34 @@ def load_settings(root, policy=None):
         groups.append(Group(tag, local_path(root, item["path"]), exclude))
     if len({g.tag for g in groups}) != len(groups) or len({g.path for g in groups}) != len(groups):
         raise ValueError("Backup groups must have unique tags and paths")
-    return Settings(*paths, retention, tuple(groups))
+    sqlite = None
+    if "sqlite" in data:
+        item = data["sqlite"]
+        directory = local_path(root, item["directory"])
+        tag = clean_text(item["group_tag"])
+        if not any(g.tag == tag and g.path == directory and g.exclude is None for g in groups):
+            raise ValueError("SQLite staging must have its own complete backup group")
+        protected = [paths[0], paths[1], *(g.path for g in groups if g.tag != tag)]
+        if any(directory.is_relative_to(p) or p.is_relative_to(directory) for p in protected):
+            raise ValueError("SQLite staging overlaps a protected path")
+        numbers = [item[key] for key in ("timeout_seconds", "deadline_seconds", "retry_sleep_seconds")]
+        if any(type(n) not in (int, float) or not 0 < n < float("inf") for n in numbers):
+            raise ValueError("SQLite timing values must be finite and positive")
+        if type(item["pages_per_step"]) is not int or item["pages_per_step"] < 1:
+            raise ValueError("SQLite page batch must be positive")
+        databases = []
+        for db in item["databases"]:
+            name = clean_text(db["name"])
+            if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
+                raise ValueError("Invalid SQLite database name")
+            source = local_path(root, db["path"])
+            if source.is_relative_to(directory) or source.is_relative_to(paths[0]):
+                raise ValueError("SQLite source must be outside staging and repository")
+            databases.append(Database(name, source))
+        if not databases or len({db.name for db in databases}) != len(databases) or len({db.path for db in databases}) != len(databases):
+            raise ValueError("SQLite databases must have unique names and paths")
+        sqlite = SQLiteSettings(directory, tag, numbers[0], numbers[1], item["pages_per_step"], numbers[2], tuple(databases))
+    return Settings(*paths, retention, tuple(groups), sqlite)
 
 
 def main():

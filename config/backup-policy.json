@@ -5,8 +5,21 @@
   "verification_directory": "reports/backup-verification",
   "retention": { "daily": 7, "weekly": 4, "monthly": 6 },
   "groups": [
-    { "tag": "configs", "path": "configs", "exclude": "*.sqlite3" },
+    { "tag": "configs", "path": "configs", "exclude": "*.sqlite3*" },
     { "tag": "lightrag-data", "path": "lightrag/data", "exclude": null },
-    { "tag": "grafana", "path": "monitoring/grafana", "exclude": "*.db" }
-  ]
+    { "tag": "grafana", "path": "monitoring/grafana", "exclude": "*.db*" },
+    { "tag": "sqlite-databases", "path": "backup-staging/sqlite", "exclude": null }
+  ],
+  "sqlite": {
+    "directory": "backup-staging/sqlite",
+    "group_tag": "sqlite-databases",
+    "timeout_seconds": 5,
+    "deadline_seconds": 120,
+    "pages_per_step": 256,
+    "retry_sleep_seconds": 0.1,
+    "databases": [
+      { "name": "authelia", "path": "configs/authelia/db.sqlite3" },
+      { "name": "grafana", "path": "monitoring/grafana/grafana.db" }
+    ]
+  }
 }
