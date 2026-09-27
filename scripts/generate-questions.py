@@ -22,11 +22,12 @@ Compliance:
 """
 
 import argparse
-import glob
 import json
 import os
 import sys
 import time
+from pathlib import Path
+import tempfile
 
 # HTTPS-only transport; keys are sent in a header, never a URL.
 import requests
@@ -83,7 +84,7 @@ def augment_document(filepath: str, api_key: str, model: str) -> str | None:
         return None
 
     # Append questions section
-    questions_section = "\n\n## Related Questions Patients Might Ask\n\n"
+    questions_section = load_settings().questions_heading
     for q in questions:
         questions_section += f"- {q}\n"
 
@@ -101,10 +102,18 @@ def process_file(filepath: str, output_dir: str, api_key: str, model: str) -> bo
         return False
 
     # Write to output directory
+    for path in (Path(output_dir), *Path(output_dir).parents):
+        if path.is_symlink():
+            raise ValueError("Symlink output is forbidden")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, filename)
-    with open(output_path, "w", encoding="utf-8") as f:
+    if Path(output_path).is_symlink():
+        raise ValueError("Symlink output is forbidden")
+    with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output_dir,
+                                     prefix=".augmentation-", delete=False) as f:
         f.write(augmented)
+        temporary = Path(f.name)
+    temporary.replace(output_path)
 
     print("OK")
     return True
@@ -127,26 +136,26 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    if bool(args.file) == bool(args.dir):
+        return 1
+    source = Path(args.file or args.dir)
+    if source.is_symlink() or not source.exists():
+        print("Invalid source", file=sys.stderr)
+        return 1
+    base = source.parent if args.file else source
+    output_dir = Path(args.output) if args.output else base / "augmented"
+    if output_dir.resolve() == base.resolve() or base.resolve().is_relative_to(output_dir.resolve()):
+        print("Output cannot overwrite source", file=sys.stderr)
+        return 1
+    files = [source] if args.file else sorted(source.rglob("*.md"))
+    files = [p for p in files if not p.resolve().is_relative_to(output_dir.resolve())]
+    if not files or any(not p.is_file() or p.is_symlink() or p.stat().st_size == 0
+                        or any(parent.is_symlink() for parent in p.parents) for p in files):
+        print("No valid current source documents", file=sys.stderr)
+        return 1
     api_key = get_api_key()
     model = get_model()
-
-    print(f"HyDE Question Generator")
-    print(f"  Model: {model}")
-    print()
-
-    files = []
-    if args.file:
-        files = [args.file]
-        default_output = os.path.join(os.path.dirname(args.file), "augmented")
-    else:
-        files = sorted(glob.glob(os.path.join(args.dir, "**", "*.md"), recursive=True))
-        default_output = os.path.join(args.dir, "augmented")
-
-    output_dir = args.output or default_output
-
-    if not files:
-        print(f"No .md files found")
-        sys.exit(0)
+    print("HyDE Question Generator")
 
     print(f"  Found {len(files)} files to process")
     print(f"  Output: {output_dir}")
@@ -157,16 +166,15 @@ def main():
 
     for filepath in files:
         try:
-            if process_file(filepath, output_dir, api_key, model):
+            if process_file(str(filepath), str(output_dir / filepath.relative_to(base).parent), api_key, model):
                 succeeded += 1
             else:
                 failed += 1
-        except Exception as e:
-            print(f"ERROR: {e}", file=sys.stderr)
+        except (OSError, ValueError):
+            print("ERROR: Document processing failed", file=sys.stderr)
             failed += 1
 
-        # Rate limit: 1 request per second to avoid API throttling
-        time.sleep(1)
+        time.sleep(load_settings().pacing_seconds)
 
     print()
     print(f"Complete: {succeeded} succeeded, {failed} failed")

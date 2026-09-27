@@ -5,5 +5,7 @@
   "content_characters": 3000,
   "max_output_tokens": 500,
   "temperature": 0.7,
-  "question_count": 5
+  "question_count": 5,
+  "pacing_seconds": 1,
+  "questions_heading": "\n\n## Related Questions Patients Might Ask\n\n"
 }

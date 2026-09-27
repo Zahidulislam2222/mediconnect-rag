@@ -16,6 +16,8 @@ class HydeSettings:
     max_output_tokens: int
     temperature: float
     question_count: int
+    pacing_seconds: int
+    questions_heading: str
     prompt: str
 
 
@@ -36,4 +38,8 @@ def load_settings() -> HydeSettings:
     for name in ['api_base', 'api_version']:
         if not isinstance(data.get(name), str) or not data[name].strip():
             raise ValueError(f'Invalid HyDE configuration: {name}')
+    if type(data.get('pacing_seconds')) is not int or data['pacing_seconds'] < 0:
+        raise ValueError('Invalid HyDE pacing')
+    if not isinstance(data.get('questions_heading'), str) or not data['questions_heading'].strip():
+        raise ValueError('Invalid HyDE heading')
     return HydeSettings(api_key=api_key, model=model, prompt=(folder / 'hyde-prompt.txt').read_text(encoding='utf-8'), **data)
