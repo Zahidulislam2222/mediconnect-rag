@@ -1,0 +1,141 @@
+# Isolated application project. Never combine with configs/docker-compose.yml.
+name: ${SELFHOST_PROJECT:?Set a unique MediConnect project}
+x-rag: &rag
+  image: ${SELFHOST_RUNTIME_IMAGE:?Set verified locally built runtime}
+  build:
+    context: .
+    args:
+      LIGHTRAG_BASE_IMAGE: ${LIGHTRAG_IMAGE:?Set verified immutable base image}
+  environment: &rag-env
+    HOST: 0.0.0.0
+    PORT: ${RAG_CONTAINER_PORT:?}
+    LLM_BINDING: ollama
+    EMBEDDING_BINDING: ollama
+    LLM_BINDING_HOST: ${OLLAMA_INTERNAL_URL:?}
+    EMBEDDING_BINDING_HOST: ${OLLAMA_INTERNAL_URL:?}
+    WORKING_DIR: /app/data/storage
+    INPUT_DIR: /app/data/inputs
+    WHITELIST_PATHS: /health
+    CORS_ORIGINS: ${RAG_CORS_ORIGINS:?}
+    LLM_MODEL: ${LLM_MODEL:?}
+    EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
+    EMBEDDING_DIM: ${EMBEDDING_DIM:?}
+    MAX_ASYNC: ${MAX_ASYNC:?}
+    MAX_PARALLEL_INSERT: ${MAX_PARALLEL_INSERT:?}
+    EMBEDDING_FUNC_MAX_ASYNC: ${EMBEDDING_FUNC_MAX_ASYNC:?}
+    EMBEDDING_BATCH_NUM: ${EMBEDDING_BATCH_NUM:?}
+    OLLAMA_LLM_NUM_CTX: ${OLLAMA_LLM_NUM_CTX:?}
+    OLLAMA_LLM_NUM_PREDICT: ${OLLAMA_LLM_NUM_PREDICT:?}
+    OLLAMA_LLM_TEMPERATURE: ${OLLAMA_LLM_TEMPERATURE:?}
+    OLLAMA_EMBEDDING_NUM_CTX: ${OLLAMA_EMBEDDING_NUM_CTX:?}
+    LOG_DIR: ${RAG_LOG_DIR:?}
+    LOG_MAX_BYTES: ${RAG_LOG_MAX_BYTES:?}
+    LOG_BACKUP_COUNT: ${LOG_MAX_FILES:?}
+    TIMEOUT: ${TIMEOUT:?}
+    SELFHOST_EMBEDDING_TIMEOUT_SECONDS: ${SELFHOST_EMBEDDING_TIMEOUT_SECONDS:?}
+    CHUNK_SIZE: ${CHUNK_SIZE:?}
+    CHUNK_OVERLAP_SIZE: ${CHUNK_OVERLAP_SIZE:?}
+    MAX_TOTAL_TOKENS: ${MAX_TOTAL_TOKENS:?}
+    MAX_ENTITY_TOKENS: ${MAX_ENTITY_TOKENS:?}
+    MAX_RELATION_TOKENS: ${MAX_RELATION_TOKENS:?}
+    TOP_K: ${TOP_K:?}
+    CHUNK_TOP_K: ${CHUNK_TOP_K:?}
+  mem_limit: ${RAG_MEMORY_LIMIT:?}
+  cpus: ${RAG_CPU_LIMIT:?}
+  pids_limit: ${RAG_PID_LIMIT:?}
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: ${LOG_MAX_SIZE:?}
+      max-file: ${LOG_MAX_FILES:?}
+services:
+  ollama:
+    image: ${OLLAMA_IMAGE:?Set verified immutable image}
+    environment:
+      OLLAMA_HOST: ${OLLAMA_LISTEN:?}
+      OLLAMA_MODELS: /models
+      OLLAMA_NO_CLOUD: '1'
+      OLLAMA_CONTEXT_LENGTH: ${OLLAMA_CONTEXT_LENGTH:?}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:?}
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:?}
+      OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:?}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:?}
+    volumes: [models:/models]
+    mem_limit: ${OLLAMA_MEMORY_LIMIT:?}
+    cpus: ${OLLAMA_CPU_LIMIT:?}
+    pids_limit: ${OLLAMA_PID_LIMIT:?}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [medical, codebase]
+    logging:
+      driver: json-file
+      options:
+        max-size: ${LOG_MAX_SIZE:?}
+        max-file: ${LOG_MAX_FILES:?}
+  medical:
+    <<: *rag
+    networks: [medical]
+    volumes: [medical:/app/data]
+    environment:
+      <<: *rag-env
+      AUTH_ACCOUNTS: ${MEDICAL_AUTH_ACCOUNTS:?}
+      LIGHTRAG_API_KEY: ${MEDICAL_API_KEY:?}
+      TOKEN_SECRET: ${MEDICAL_TOKEN_SECRET:?}
+  codebase:
+    <<: *rag
+    networks: [codebase]
+    volumes: [codebase:/app/data]
+    environment:
+      <<: *rag-env
+      AUTH_ACCOUNTS: ${CODEBASE_AUTH_ACCOUNTS:?}
+      LIGHTRAG_API_KEY: ${CODEBASE_API_KEY:?}
+      TOKEN_SECRET: ${CODEBASE_TOKEN_SECRET:?}
+  ingress:
+    image: ${INGRESS_IMAGE:?Set verified immutable proxy image}
+    user: "101:101"
+    read_only: true
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    environment:
+      NGINX_ENVSUBST_OUTPUT_DIR: /tmp
+      NGINX_ENVSUBST_FILTER: '^(RAG_CONTAINER_PORT|PROXY_)'
+      RAG_CONTAINER_PORT: ${RAG_CONTAINER_PORT:?}
+      PROXY_MEDICAL_PORT: ${PROXY_MEDICAL_PORT:?}
+      PROXY_CODEBASE_PORT: ${PROXY_CODEBASE_PORT:?}
+      PROXY_MAX_BODY_SIZE: ${PROXY_MAX_BODY_SIZE:?}
+      PROXY_READ_TIMEOUT: ${PROXY_READ_TIMEOUT:?}
+      PROXY_CONNECT_TIMEOUT: ${PROXY_CONNECT_TIMEOUT:?}
+      PROXY_DNS_TTL: ${PROXY_DNS_TTL:?}
+      PROXY_DNS_TIMEOUT: ${PROXY_DNS_TIMEOUT:?}
+      PROXY_CONNECTIONS: ${PROXY_CONNECTIONS:?}
+    command: [nginx, -c, /tmp/default.conf, -g, "daemon off;"]
+    volumes: ["./proxy.conf.template:/etc/nginx/templates/default.conf.template:ro"]
+    ports:
+      - "127.0.0.1:${MEDICAL_HOST_PORT:?}:${PROXY_MEDICAL_PORT:?}"
+      - "127.0.0.1:${CODEBASE_HOST_PORT:?}:${PROXY_CODEBASE_PORT:?}"
+    mem_limit: ${PROXY_MEMORY_LIMIT:?}
+    cpus: ${PROXY_CPU_LIMIT:?}
+    pids_limit: ${PROXY_PID_LIMIT:?}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    networks: [medical, codebase, ingress]
+    depends_on: [medical, codebase]
+    logging:
+      driver: json-file
+      options:
+        max-size: ${LOG_MAX_SIZE:?}
+        max-file: ${LOG_MAX_FILES:?}
+networks:
+  medical:
+    internal: true
+  codebase:
+    internal: true
+  ingress: {}
+volumes:
+  models:
+  medical:
+  codebase:

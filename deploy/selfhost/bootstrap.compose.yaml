@@ -1,0 +1,7 @@
+# Temporary public-weight download only. Use with the base compose file.
+# Only Ollama gains download-network attachment; the model network stays internal.
+services:
+  ollama:
+    networks: [medical, codebase, downloads]
+networks:
+  downloads: {}
