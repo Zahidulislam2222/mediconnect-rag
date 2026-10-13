@@ -1,5 +1,7 @@
 # RAG-Anything document processor
 
+Reviewed 2026-10-13. Current platform acceptance is tracked in the [release ledger](https://github.com/Zahidulislam2222/mediconnect-infrastructure-production/blob/main/docs/RELEASE-STATUS.md); this guide retains its bounded component contract.
+
 This optional CLI validates approved public documents before invoking the model provider. It never diagnoses or prescribes. Real generation and embeddings may cost money: verify account eligibility and obtain the owner’s cost approval before `--execute`. Do not submit identifiable health data without the required provider agreement.
 
 ## Plan first

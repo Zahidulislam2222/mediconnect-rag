@@ -63,7 +63,7 @@ services:
       OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:?}
       OLLAMA_MAX_QUEUE: ${OLLAMA_MAX_QUEUE:?}
       OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:?}
-    volumes: [models:/models]
+    volumes: [models:/models, identity:/root/.ollama]
     mem_limit: ${OLLAMA_MEMORY_LIMIT:?}
     cpus: ${OLLAMA_CPU_LIMIT:?}
     pids_limit: ${OLLAMA_PID_LIMIT:?}
@@ -137,5 +137,6 @@ networks:
   ingress: {}
 volumes:
   models:
+  identity:
   medical:
   codebase:
