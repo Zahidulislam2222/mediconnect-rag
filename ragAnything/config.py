@@ -1,62 +1,45 @@
-"""
-RAG-Anything configuration for Gemini 2.5 Flash.
-Uses the same GEMINI_API_KEY from the project's .env file.
-"""
+"""Construct the optional SDK from validated settings; imports remain inert."""
+from settings import ProcessorSettings
 
-import os
-import numpy as np
-from raganything import RAGAnythingConfig
-from lightrag.llm.gemini import gemini_model_complete, gemini_embed
-from lightrag.utils import wrap_embedding_func_with_attrs
 
-# RAG-Anything config
-rag_config = RAGAnythingConfig(
-    working_dir="/app/storage",
-    parser="mineru",
-    parse_method="auto",
-    enable_image_processing=True,
-    enable_table_processing=True,
-    enable_equation_processing=True,
-)
+def create_rag(settings: ProcessorSettings):
+    import numpy as np
+    from engine_adapter import ProcessorRuntime
+    from gemini_adapter import GeminiAdapter
+    from lightrag.utils import wrap_embedding_func_with_attrs
+    from raganything import RAGAnything, RAGAnythingConfig
 
-# Gemini LLM function (text generation)
-async def llm_model_func(
-    prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs
-) -> str:
-    return await gemini_model_complete(
-        prompt,
-        system_prompt=system_prompt,
-        history_messages=history_messages,
-        api_key=os.getenv("GEMINI_API_KEY"),
-        model_name=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
-        **kwargs
+    adapter = GeminiAdapter(settings)
+    rag_config = RAGAnythingConfig(
+        working_dir=str(settings.working_dir),
+        parser_output_dir=str(settings.output_dir),
+        parser=settings.parser,
+        parse_method=settings.parse_method,
+        enable_image_processing=settings.enable_image_processing,
+        enable_table_processing=settings.enable_table_processing,
+        enable_equation_processing=settings.enable_equation_processing,
+        use_full_path=True,
     )
+    # The SDK legacy environment alias must not override the validated boundary.
+    rag_config.parse_method = settings.parse_method
 
-# Gemini Vision function (multimodal queries)
-async def vision_model_func(
-    prompt, system_prompt=None, history_messages=[],
-    image_data=None, messages=None, **kwargs
-) -> str:
-    return await gemini_model_complete(
-        prompt,
-        system_prompt=system_prompt,
-        history_messages=history_messages,
-        api_key=os.getenv("GEMINI_API_KEY"),
-        model_name=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
-        **kwargs
-    )
+    async def llm_model_func(prompt, system_prompt=None, history_messages=None,
+                             keyword_extraction=False, **kwargs) -> str:
+        return await adapter.generate(prompt, system_prompt=system_prompt,
+                                      history_messages=history_messages, **kwargs)
 
-# Gemini Embedding function
-EMBEDDING_DIM = int(os.getenv("EMBEDDING_DIM", "1536"))
+    async def vision_model_func(prompt, system_prompt=None, history_messages=None,
+                                image_data=None, messages=None, **kwargs) -> str:
+        return await adapter.generate(prompt, system_prompt=system_prompt,
+            history_messages=history_messages, image_data=image_data, messages=messages, **kwargs)
 
-@wrap_embedding_func_with_attrs(
-    embedding_dim=EMBEDDING_DIM,
-    max_token_size=2048,
-    model_name=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
-)
-async def embedding_func(texts: list[str]) -> np.ndarray:
-    return await gemini_embed(
-        texts,
-        api_key=os.getenv("GEMINI_API_KEY"),
-        model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
-    )
+    @wrap_embedding_func_with_attrs(embedding_dim=settings.embedding_dim,
+                                    max_token_size=settings.embedding_max_tokens)
+    async def embedding_func(texts: list[str]) -> np.ndarray:
+        return await adapter.embed(texts)
+
+    rag = RAGAnything(config=rag_config, llm_model_func=llm_model_func,
+                     vision_model_func=vision_model_func, embedding_func=embedding_func,
+                     lightrag_kwargs={'llm_model_name': settings.llm_model,
+                                      'tiktoken_model_name': settings.tokenizer_model})
+    return ProcessorRuntime(rag, adapter)

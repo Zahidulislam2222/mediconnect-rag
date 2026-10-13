@@ -1,0 +1,11 @@
+# Only reviewed source enters the image; persistent knowledge and outputs stay local.
+**
+!Dockerfile
+!.dockerignore
+!requirements.txt
+!process.py
+!config.py
+!settings.py
+!processor.json
+!gemini_adapter.py
+!engine_adapter.py
