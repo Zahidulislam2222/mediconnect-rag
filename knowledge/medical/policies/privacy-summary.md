@@ -1,40 +1,19 @@
 # MediConnect Privacy Summary
 
-## What data we collect
-- Account information (name, email, date of birth)
-- Health records (allergies, immunizations, prescriptions, vitals)
-- Appointment history
-- Payment information (processed by Stripe — we never see card numbers)
-- Chat conversations with AI assistant
+## Current scope
+The public website is a project showcase. Patient-account access, payments and clinical services are unavailable. This knowledge summary explains the current release boundary; it does not replace the website's published [Privacy Policy](/privacy-policy) or [Terms of Service](/terms-of-service).
 
-## How we protect your data
-- All health data encrypted with AWS KMS (at rest and in transit)
-- PII masking in all logs (emails, phone numbers, SSNs automatically redacted)
-- 7-year audit trail for compliance
-- Two-factor authentication available
-- Browser data encrypted with AES-GCM 256-bit
+## Patient and payment information
+Do not send health records, patient identifiers, card details or urgent medical requests to the showcase, project contact channel or AI demonstration. Source features for records, billing and consent do not establish an operating clinical service or permission to collect sensitive information.
 
-## Your rights (GDPR)
-- **Access** (Art 15): Export all your data as FHIR Bundle
-- **Erasure** (Art 17): Request complete data deletion with 30-day grace period
-- **Portability** (Art 20): Download data in standard FHIR format
-- **Consent** (Art 7): Manage your consent preferences at any time
-- **Withdraw** (Art 7): Withdraw consent without affecting prior processing
+## Engineering controls and launch gates
+The source includes encryption, regional routing, authorization, MFA, audit and privacy-request features. Their complete live coverage and operating procedures still require verification. This summary does not establish HIPAA or GDPR certification, signed business-associate agreements, guaranteed regional isolation, universal log scrubbing, a fixed retention period or complete automatic erasure. Operating-entity and public-business-address details are unresolved launch requirements.
 
-## Data residency
-- US patients: us-east-1 (Virginia, USA)
-- EU patients: eu-central-1 (Frankfurt, Germany)
-- Data never crosses regions
+## Website analytics
+Live browser verification detected an injected analytics script and a same-origin telemetry request. The observed analytics remain unresolved. Do not treat this release as analytics-free or assume that application settings disable telemetry added by the hosting layer.
 
-## AI chatbot
-- This chatbot is an AI assistant, not a medical professional
-- Conversations are logged for quality and compliance
-- Your messages are scrubbed of personal information before AI processing
-- Chat history is included in GDPR data export and erasure
-- The AI never stores your personal health information
+## AI and knowledge processing
+The isolated RAG verification uses synthetic nonclinical fixtures. An AI response is not medical advice, a diagnosis, a clinician or a verified statement about service availability. Do not assume that prompts are universally anonymized, never stored, or covered by a complete export/erasure workflow. Real patient-data use requires separately verified privacy, security, clinical and contractual gates.
 
-## Third parties
-- AWS: Infrastructure (HIPAA BAA signed)
-- Stripe: Payment processing (PCI-DSS Level 1)
-- Google Cloud: Analytics and AI fallback
-- No data sold to third parties. Ever.
+## Privacy enquiries
+Use the published website contact information and privacy notice to raise a question. Do not send sensitive records with the initial enquiry. No fixed fulfilment deadline, deletion guarantee, third-party agreement or data-sale policy is created by this summary.

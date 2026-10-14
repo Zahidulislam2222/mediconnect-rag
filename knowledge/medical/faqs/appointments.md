@@ -1,25 +1,13 @@
 # Appointment FAQs
 
-## How do I book an appointment?
-Go to the Appointments page and select a doctor. Choose an available time slot, enter your payment method, and confirm. You'll receive a confirmation email immediately.
+## Can I book a real appointment now?
+The current public MediConnect website is a showcase. Account access, real appointment booking and clinical consultations are unavailable in this release. A displayed doctor, schedule or consultation interface does not establish an available or licensed care service.
 
-## How do I reschedule an appointment?
-Go to Appointments > Upcoming, find your appointment, and click Reschedule. You can reschedule up to 2 hours before the appointment time at no extra charge.
+## Can I reschedule or cancel a booking?
+The source includes appointment-management features, but the current public release cannot manage real bookings. No cancellation window, fee, refund entitlement, consultation duration or reminder schedule is established by this FAQ. Any future service must publish its applicable terms before accepting a booking.
 
-## How do I cancel an appointment?
-Go to Appointments > Upcoming, find your appointment, and click Cancel. Cancellations made more than 2 hours before the appointment receive a full refund. Cancellations within 2 hours may incur a cancellation fee.
+## Are family appointments or video consultations available?
+Family booking and clinical video consultations are unavailable in the current public release. A subscription illustration or video interface does not establish eligibility, provider availability or healthcare compliance.
 
-## How long are appointments?
-Standard consultations are 30 minutes. Your doctor may recommend follow-up appointments for ongoing care.
-
-## Can I book an appointment for a family member?
-If you have a MediConnect Premium subscription with family sharing enabled, family members can book appointments using the shared discount. Each family member must have their own MediConnect account.
-
-## What if I miss my appointment?
-Missed appointments (no-shows) are not eligible for refunds. We send reminders 24 hours and 1 hour before your appointment via email.
-
-## Can I see any doctor?
-Yes, all verified doctors on MediConnect are available for booking. You can filter by specialty, availability, and ratings.
-
-## How do video consultations work?
-After booking, click "Join" at your appointment time. Video consultations use Amazon Chime SDK for secure, HIPAA-compliant video calls. You need a device with a camera and microphone.
+## Where can I get help?
+Use the website's published contact information for questions about the project. Do not send patient records, payment details or urgent medical requests through the showcase. For an emergency, contact your local emergency services; this project is not an emergency-care channel.

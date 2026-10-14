@@ -1,40 +1,25 @@
 # MediConnect Architecture Summary
 
-## Overview
-Production-grade multi-cloud healthcare platform with 7 microservices, 4 Lambda functions, and 35 FHIR R4 resource types. Three-cloud architecture: AWS (primary), GCP (backup compute + analytics), Azure (K8s orchestration).
+## Public release and source capabilities
+MediConnect is a connected-care engineering project with a React/TypeScript website, Strapi CMS, backend services, infrastructure definitions and a separate LightRAG stack. The current public website is a showcase: account access, payments and clinical services are unavailable. Source capabilities below do not establish a complete operating healthcare service, compliance certification or measured capacity.
 
-## Services
+## Repository responsibilities
 
-| Service | Language | Port | Purpose |
-|---------|----------|------|---------|
-| patient-service | Node.js/TS | 8081 | Registration, vitals, FHIR Patient, allergies, immunizations, care plans, MPI, GDPR |
-| doctor-service | Node.js/TS | 8082 | EHR, e-prescriptions, SNOMED CT, lab orders, CDS Hooks, med-reconciliation |
-| booking-service | Node.js/TS | 8083 | Appointments, Stripe billing, subscriptions, prior auth, Google Calendar |
-| communication-service | Node.js/TS | 8084 | WebSocket chat, Chime video, AI circuit breaker, chatbot |
-| admin-service | Python/FastAPI | 8085 | User management, audit logs, system health, subscription dashboard |
-| staff-service | Node.js/TS | 8086 | Shifts, tasks, announcements, staff directory |
-| dicom-service | Python/FastAPI | 8005 | DICOM upload, de-identification, PACS, FHIR ImagingStudy |
+| Component | Responsibility |
+|---|---|
+| Website and preserved Capacitor client | Public pages, CMS-backed guides and protected-role interface source |
+| Strapi CMS | Editorial article and media source for public guides |
+| Production infrastructure repository | Backend application source, regional configuration, infrastructure and deployment definitions |
+| Historical development implementation | Historical reference; not the current backend authority |
+| RAG stack | Separate medical and codebase knowledge workspaces, ingestion, model integration and operational tooling |
 
-## Shared Utilities (backend_v2/shared/)
-- aws-config.ts: Regional AWS SDK client factories
-- audit.ts: FHIR AuditEvent logging (7-year TTL)
-- kms-crypto.ts: KMS envelope encryption for PHI
-- logger.ts: Winston PII masking
-- breach-detection.ts: Rate-based anomaly detection
-- validation.ts: Zod request validation middleware
-- event-bus.ts: SQS + Kafka event pipeline (35 EventTypes)
-- kafka.ts: Kafka client with MSK IAM auth
-- subscription.ts: Subscription plans, discount calculation, rate cap
-- notifications.ts: SES email notifications (11 types)
-- emergency-access.ts: HIPAA break-glass override
+## Backend source
+Node/TypeScript services cover patient, doctor, booking, communication and staff responsibilities. Python/FastAPI source covers administration and DICOM-oriented imaging. Shared modules provide request validation, authentication and regional context, encryption helpers, audit/logging, subscriptions and event integration. Each deployed flow requires its own live authorization, regional, provider and data-integrity acceptance evidence.
 
-## Data Flow
-Patient App → x-user-region header → API Gateway → Service → Regional DynamoDB
-US users → us-east-1 resources | EU users → eu-central-1 resources
+The application has AWS-oriented data and identity integrations alongside configured external compute and infrastructure definitions. Current resource inventory, deployment status, ports, providers, quotas and counts must be obtained from configuration and platform-native evidence; historical source counts are not a live inventory. Regional routing intent does not prove that every service or third party prevents cross-region transfer.
 
-## Infrastructure
-- 414 Terraform resources (370 AWS + 40 GCP + 4 Azure)
-- 46 DynamoDB tables (23 × 2 regions)
-- 7 Kafka topics (MSK Serverless)
-- 26 SQS queues with DLQ
-- CI/CD: GitHub Actions (5-stage pipeline)
+## Current isolated RAG verification
+Medical and codebase workspaces use separate persistent data roots and API keys. The configured self-hosted model provider uses shared local CPU resources, persistent model and identity storage, internal workspace networks and loopback-only ingress. Actual synthetic generation and embedding have passed; full ingestion/retrieval acceptance, application wiring, workload limits, monitoring and coordinated restore are separate gates. No public patient-data RAG endpoint or clinical-quality claim is established here.
+
+## Deployment and recovery evidence
+Application publication, deployment, exact local/live file parity, real HTTP/UI behavior, independent review and backup/restore are distinct checks. A successful build, queued ingestion request or healthy container alone does not establish a finished phase. Clinical launch also depends on verified operating-entity, address, provider, privacy and contractual requirements.

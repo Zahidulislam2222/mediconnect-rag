@@ -1,27 +1,16 @@
 # Health Records FAQs
 
-## What health records can I access?
-You can view your allergies, immunizations, care plans, prescriptions, lab results, vitals, and appointment history — all in FHIR R4 format.
+## Can I access or upload a real health record?
+The current public release does not provide patient-account or clinical-record access. Do not upload real patient records to the showcase or its AI demonstration.
 
-## How do I export my health data?
-Go to Settings > GDPR > Export Data. MediConnect exports your complete health record as a FHIR Bundle with a SHA-256 integrity hash. This is compliant with GDPR Article 20 (data portability).
+## What does the source include?
+The project contains patient-record, FHIR-oriented interoperability, export and erasure features. Their presence in source does not establish complete deployment, compatibility with another provider, authorization behavior or successful fulfilment of a privacy request.
 
-## How do I delete my data?
-Go to Settings > GDPR > Request Erasure. There is a 30-day grace period during which you can cancel the request. After 30 days, your data is permanently anonymized across all systems including chat history, appointments, prescriptions, and analytics.
+## How do I request access, export or erasure?
+Read the website's published [Privacy Policy](/privacy-policy) and contact its published support channel. The showcase cannot promise a complete export, automatic deletion, a fixed grace period or deletion across every connected system. Applicable identity checks, retention duties and operating procedures require verification before clinical launch.
 
-## Is my data encrypted?
-Yes. All patient health information (PHI) is encrypted using AWS KMS envelope encryption both at rest and in transit. Your data in the browser is encrypted with AES-GCM 256-bit encryption.
+## Are encryption, regional storage and clinician access verified?
+The source contains encryption, regional routing, authorization and audit controls. Complete live coverage, cross-region transfer restrictions and clinician-access behavior have not been established by this FAQ. Do not treat these engineering controls as a compliance certification or a guarantee that every record is protected in every system.
 
-## Can my doctor see my records?
-Your doctor can only see records relevant to your care during an active appointment. Emergency access (break-glass) is available with strict time limits, reason codes, and full audit trail per HIPAA regulations.
-
-## Where is my data stored?
-US patients: data stored in AWS us-east-1 (Virginia).
-EU patients: data stored in AWS eu-central-1 (Frankfurt).
-Your data never crosses regions — this complies with GDPR Schrems II requirements.
-
-## What is FHIR?
-FHIR (Fast Healthcare Interoperability Resources) is the international standard for exchanging healthcare information electronically. MediConnect supports 35 FHIR R4 resource types and US Core profiles.
-
-## Can I share my records with another provider?
-Yes. Use the Data Export feature to download your FHIR Bundle, which any FHIR-compatible healthcare system can import. We also support Blue Button 2.0 for CMS-compliant data access.
+## What does FHIR mean here?
+FHIR stands for Fast Healthcare Interoperability Resources. The project uses FHIR-oriented data structures; this does not establish a certified implementation, a verified resource count or compatibility with a particular external service.
