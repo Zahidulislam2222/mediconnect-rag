@@ -19,3 +19,15 @@ Request privacy: ingress access and error logs are disabled. Python logging reco
 Ollama's documented application home has a distinct named `identity` volume at `/root/.ollama`; the existing model store remains at `/models`. Inventory the generated identity in the private recovery register and include this volume in encrypted consistent recovery. Before replacing an existing local container without this mount, preserve and verify its identity bytes in the owned volume and recovery register. Recreation must retain the same identity; a newly generated key is not recovery of the original. No identity value belongs in public artifacts or logs.
 
 The added identity volume passed controlled local recreation: both existing identity files retained their bytes, the model store stayed unchanged, and authenticated workspace HTTP plus sibling/resource/network checks passed. VPS deployment and application-consistent recovery remain open.
+
+Network allocation uses four explicit subnet settings in the private `.env`:
+`MEDICAL_NETWORK_SUBNET`, `CODEBASE_NETWORK_SUBNET`, `INGRESS_NETWORK_SUBNET`
+and `DOWNLOAD_NETWORK_SUBNET`. The example CIDRs are illustrative; before each
+deployment verify their nonoverlap with every current Docker IPAM subnet, host
+interface address and non-default route, and with one another. Preserve an
+existing owned network's exact subnet when recovering a partial activation.
+Check its Compose project/network labels, internal flag and attached containers
+before reuse. Never prune other networks or change the shared daemon to obtain
+address capacity. Keep medical and codebase internal; only the temporary Ollama
+download network permits model-download egress. The failed automatic allocation
+does not establish successful activation, model availability or retrieval.

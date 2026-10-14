@@ -132,9 +132,18 @@ services:
 networks:
   medical:
     internal: true
+    ipam:
+      config:
+        - subnet: ${MEDICAL_NETWORK_SUBNET:?Set a verified unused private subnet}
   codebase:
     internal: true
-  ingress: {}
+    ipam:
+      config:
+        - subnet: ${CODEBASE_NETWORK_SUBNET:?Set a verified private subnet}
+  ingress:
+    ipam:
+      config:
+        - subnet: ${INGRESS_NETWORK_SUBNET:?Set a verified unused private subnet}
 volumes:
   models:
   identity:

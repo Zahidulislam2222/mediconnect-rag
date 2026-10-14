@@ -4,4 +4,7 @@ services:
   ollama:
     networks: [medical, codebase, downloads]
 networks:
-  downloads: {}
+  downloads:
+    ipam:
+      config:
+        - subnet: ${DOWNLOAD_NETWORK_SUBNET:?Set a verified unused private subnet}
