@@ -33,3 +33,9 @@ download network permits model-download egress. The failed automatic allocation
 does not establish successful activation, model availability or retrieval.
 
 CPU-only indexing uses a bounded 600-second provider read timeout. The proxy permits 660 seconds for a foreground response; background indexing is observed separately and can require multiple model calls. These are configured allowances, not measured latency guarantees; they do not cap the upstream SDK priority-queue wait. Run indexing serially, verify tracked processed state, and preserve failed records before an explicitly reviewed retry.
+
+### Full-document persistence
+
+The pinned SDK storage boundary saves complete document text before returning from a full-document upsert, before the SDK can durably enqueue its status. JSON key/value and document-status writes use private temporary files, file sync and atomic replacement; the Linux runtime also syncs the parent directory. This keeps a failed extraction and later restart from leaving a durable status with a missing payload. Persistence errors propagate; they do not establish successful indexing.
+
+The reviewed SDK version and source fingerprints live in `storage_contract.json`; an unknown version or changed storage implementation fails startup. This is an installed dependency protocol contract, separate from model/provider settings in the environment. It does not repair an existing orphaned record automatically or replace a coordinated backup/restore procedure.

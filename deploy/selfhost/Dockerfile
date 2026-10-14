@@ -9,7 +9,7 @@ ENV PYTHONUSERBASE=/opt/python
 ENV PATH=/opt/python/bin:$PATH
 # Tokenizer choice belongs to the pinned SDK; no provider model is called.
 RUN python -c "import tiktoken; from lightrag import LightRAG; tiktoken.encoding_for_model(LightRAG.__dataclass_fields__['tiktoken_model_name'].default)"
-COPY runtime_settings.py logging_policy.py server.py /opt/mediconnect-selfhost/
+COPY runtime_settings.py logging_policy.py server.py storage_policy.py storage_contract.json /opt/mediconnect-selfhost/
 RUN mkdir -p /app/data /app/logs && chown -R 1000:1000 /app/data /app/logs
 USER 1000:1000
 RUN python -c "import numpy, fastapi, ollama; from lightrag.api import lightrag_server"

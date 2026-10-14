@@ -1,0 +1,10 @@
+{
+  "distribution": "lightrag-hku",
+  "version": "1.4.6",
+  "module_sha256": {
+    "lightrag.kg.json_kv_impl": "7d35c6af94dd97cd61cc8357428795d52f2b193d5c893ca8aafd04c001ac6330",
+    "lightrag.kg.json_doc_status_impl": "d422b18cbd4184a75aefae31aff2c260b0a133199b00dfe1212231346d4cb2b1",
+    "lightrag.lightrag": "87b89b2afde79e162013f38dd7350551b72fdca916e5be9fcfa466cbc49c0ce7",
+    "lightrag.namespace": "89cc433204295d1f8314c85d9a9406e6bcba68787dcbe6636e1daa8e5bb5f869"
+  }
+}

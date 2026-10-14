@@ -5,6 +5,7 @@ from typing import Any
 
 from logging_policy import install_private_logging, without_access_logging
 from runtime_settings import RuntimeSettings
+from storage_policy import install_durable_storage
 
 
 def bounded_embedding(function: Callable[..., Awaitable[Any]], settings: RuntimeSettings) -> Callable[..., Awaitable[Any]]:
@@ -20,6 +21,7 @@ def bounded_embedding(function: Callable[..., Awaitable[Any]], settings: Runtime
 def main() -> None:
     settings = RuntimeSettings.from_environment()
     install_private_logging()
+    install_durable_storage()
     from lightrag.llm import ollama
     ollama.ollama_embed = bounded_embedding(ollama.ollama_embed, settings)
     from lightrag.api import lightrag_server
