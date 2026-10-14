@@ -31,3 +31,5 @@ before reuse. Never prune other networks or change the shared daemon to obtain
 address capacity. Keep medical and codebase internal; only the temporary Ollama
 download network permits model-download egress. The failed automatic allocation
 does not establish successful activation, model availability or retrieval.
+
+CPU-only indexing uses a bounded 600-second provider read timeout. The proxy permits 660 seconds for a foreground response; background indexing is observed separately and can require multiple model calls. These are configured allowances, not measured latency guarantees; they do not cap the upstream SDK priority-queue wait. Run indexing serially, verify tracked processed state, and preserve failed records before an explicitly reviewed retry.
