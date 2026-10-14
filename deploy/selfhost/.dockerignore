@@ -3,3 +3,5 @@
 !runtime_settings.py
 !server.py
 !logging_policy.py
+!storage_policy.py
+!storage_contract.json
